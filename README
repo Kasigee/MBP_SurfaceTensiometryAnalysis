@@ -1,0 +1,45 @@
+I have currently written some analysis scripts in python that do the “heavy-lifting” for you. Current code may be found at Kasigee/MBP_SurfaceTensiometryAnalysis: Analysis Library and code for the analysis of data provided by the maximum bubble surface tensiometer (made for the one built at ANU, however would be adaptable to other systems). (github.com).
+I will need to do further streamlining of this to make it more user-friendly to users who are not me! Hopefully this will occur between me writing this now (01/03/2023) and when I am scheduled to finish on this project (31/03/2023). However, this may be difficult to fit in when combined with doing actual experiments, my other current role in the Research School of Biology, and attempting to find time for finishing papers and doing other collaborations.
+
+Note – the python program should work “out-of-box”. However, there may be some difficulties that could arise. For example, if during the importing step, an error pops up about about not being able to find a module named XXXXX, you should be able to just write,
+pip install XXXXX
+and then the restart the kernel and hopefully that issue should be fixed.
+
+Using Jupyter Notebook (Or similarly VS Code) might be the easiest to be able to quickly copy and paste plot output to a presentation/ word doc, etc
+SHIFT-ENTER will run a cell/analysis. It is important to run the (although maybe I’ll save this as a library to import so you don’t have to.
+Python Functions
+I have save all the functions into a python library called MBP_Library.py (Note – if you make any adjustments to the library file, you need to save it again and then restart the Kernal before the your script will “recognise” it, if using VS-Code).
+The main function, which does a time series analysis finding the peak heights and doing an averaging analysis is the primary analysis function for (pre)processing the MBP data that goes through the MOKU.
+plot_pressure(FileName,Freq,split,Time_between_bubbles)
+e.g.
+import MBP_Library as MBP
+#Clearing these lists (again!! - multiple clearances in the script, but don't seem to work) incase they get held by a previous run.
+MBP.SectionTimeStart=[]
+MBP.CUMULATIVE_RollingMAX=[]
+MBP.CUMULATIVE_AvgMAX=[]
+MBP.CUMULATIVE_AvgPeak=[]
+MBP.CUMULATIVE_RollingMAX_err=[]
+MBP.CUMULATIVE_AvgPeak_err=[]
+
+Freq=111 #Hz
+Time_between_bubbles=5 #sec
+split=300 #How much to split the data. Eg. this gives 300 unique sections of data for the 5hr test.
+FileName='TimeAnalysingTest_EtOH_0.5s_111Hz_RightAtSurface_20230308_140237'
+plot_pressure(FileName,Freq,split,Time_between_bubbles)
+
+Voltage to pressure conversion: If the sensitivity of the pressure sensor is known, the pressure (in Pa) can be calculated from the voltage (in V) difference from the baseline (ambient pressure) voltage reading to the applied pressure.
+convert_VtoP(Sensitivity, V_Diff)
+Calculating the Hydrostatic pressure: The hydrostatic pressure (needs/) can be corrected for in each of the measurements. This uses the density of the solvent (in kg/m3), the needle depth in the solution (in m) and the altitude of the measurement (in m). 
+CalculateHydrostaticPressure(solvent_density, Depth)
+
+Pressure to surface tension: If the capillary (/needle radius; in m) is known as well as the pressure difference (as calculated via convert_VtoP function) and the depth of the capillary as well as solvent density (for calculating the hydrostatic pressure),  then the following function can be used,
+convert_PtoST(CapillaryRadius, P_Diff, solvent_density, Depth)
+Surface tension to pressure: Vice-versa, if you have a known capillary/needle radius and solution surface tension, the expected pressure can be calculated. This is an important consideration for pressure sensor choice (it is possible that some of the very small capillaries, which required high pressures for bubbling, damaged the pressure sensors during the testing phase). Additionally, it gives the approximate error (and % error) to be expected from hydrostatic pressure if the solvent is water, the needle depth is 1cm (and the altitude is 500m for Canberra). Note – units are metric, so m and mN/m.
+convert_STtoP(CapillaryRadius, ST)
+
+Radius Calibration: If the surface tension of a solution is known
+CalibrateRadius(ST,P_Diff)
+
+Different Analyses: Either from  Average of the peaks (using a peak finder), Average of the maximum values, and Rolling Maximum. The first finds the peaks first so that each peak gives a unique datapoint. The second finds the top 20 (can be changed/ should be changed dependent on the total time of the sample/split and bubbling rate) values from the sample (from the rolling average data – without the rolling average it may very well) and averages them. Finally the Rolling Maximum takes the Maximum value on a rolling basis of about 5sec (this time series analysis style is similar to what is used in stock market analyses, so with hints from there, things like the exponential moving average could be used to weight more recent data – although I don’t believe that would be quite so useful here, but may decrease the dependence of the bubbling rate stated in terms of the stability of the data, i.e., you want a long enough “time between bubbles” stated so that you don’t “grab” bubble growth data among the maxima, however you also don’t want too long of a “time between bubbles” stated such that the rolling maximum is skewed to a single peak). The former two have very similar results, however the Average of the maximum values requires more precision (currently) in the choice of input parameters. A further combination of these might indeed improve the capability of these analyses.
+Average of the peaks (using a peak finder): Finds the peaks and deletes those that appear to be local maxima in “troughs”. Then takes the average and standard deviation  from all the peaks.
+peak_analysis(Time_between_bubbles,Freq,split, y, i, length)
